@@ -1,0 +1,10 @@
+{
+  "name": "jot-push",
+  "version": "1.0.0",
+  "description": "Push notification backend for Jot reminders",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

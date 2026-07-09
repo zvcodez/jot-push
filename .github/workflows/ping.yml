@@ -1,0 +1,13 @@
+name: Ping reminder check
+on:
+  schedule:
+    - cron: '*/2 * * * *'
+  workflow_dispatch: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check due reminders
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: curl -fsS "https://jot-push.vercel.app/api/check?token=$CRON_SECRET"
