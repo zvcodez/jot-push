@@ -24,6 +24,7 @@ export default async function handler(req, res) {
     let sent = 0;
 
     for (const reminder of due) {
+      let delivered = 0;
       for (const sub of subscriptions) {
         try {
           // eslint-disable-next-line no-await-in-loop
@@ -31,20 +32,26 @@ export default async function handler(req, res) {
             title: 'Jot ⏰', body: reminder.text, tag: reminder.id,
           }));
           sent += 1;
+          delivered += 1;
         } catch (e) {
           if (e.statusCode === 404 || e.statusCode === 410) {
             subscriptions = subscriptions.filter((s) => s.endpoint !== sub.endpoint);
           }
         }
       }
-      reminder.notified = true;
+      // Only mark notified if a push actually went out — e.g. a reminder due
+      // before any subscription existed, or where every send failed, should
+      // stay eligible for the next check() run instead of being silently lost.
+      if (delivered > 0) reminder.notified = true;
     }
 
-    // Prune reminders that are done, soft-deleted, or notified more than 2 days ago.
+    // Prune reminders that are done, soft-deleted, or more than 2 days past
+    // due regardless of notified state — otherwise a reminder that can never
+    // be delivered (no subscription ever showed up) accumulates forever.
     const cutoff = now - 2 * 86400000;
     const reminders = q.reminders.filter((r) => {
       if (r.done || r.deletedAt) return false;
-      if (r.notified && r.dueAt && new Date(r.dueAt).getTime() < cutoff) return false;
+      if (r.dueAt && new Date(r.dueAt).getTime() < cutoff) return false;
       return true;
     });
 
