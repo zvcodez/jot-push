@@ -17,14 +17,19 @@ once the tab has been backgrounded/screen-locked for a while).
   uses, so the two never race on the same file.
 - `GET /api/check?token=...` scans for reminders that are due and not yet
   notified, sends a Web Push to every stored subscription via `web-push`
-  (VAPID), marks them notified, and prunes old/done/deleted entries.
+  (VAPID), marks a reminder notified only once a send actually succeeds (so
+  one with no subscription yet, or a transient send failure, stays eligible
+  for the next run instead of being silently lost), and prunes done/deleted
+  entries plus anything more than 2 days past due regardless of notified
+  state.
 - Something has to call `/api/check` on a schedule. **Vercel Cron on the Hobby
-  plan only runs once a day** — not useful for reminders — so instead a
-  GitHub Actions scheduled workflow in this repo pings it every 2 minutes.
-  That means reminders fire within ~2 minutes of being due (best-effort —
-  GitHub's own scheduler can add its own delay under load), not the exact
-  second. That's still a large improvement over "doesn't fire until you
-  reopen the app," which is what happens without this backend.
+  plan only runs once a day** — not useful for reminders. A GitHub Actions
+  scheduled workflow in this repo is *configured* to ping it every 2 minutes,
+  but GitHub's scheduler is best-effort and in practice deprioritizes quiet
+  high-frequency crons — observed gaps of 3-6 hours between runs, which
+  defeats the purpose. **[cron-job.org](https://cron-job.org)** (free,
+  supports true minutely scheduling) pings `/api/check?token=<CRON_SECRET>`
+  as the primary pinger; GitHub Actions is kept as a redundant backup.
 
 ## Environment variables (set in Vercel)
 
